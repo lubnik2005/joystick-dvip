@@ -11,5 +11,8 @@ In the same file, look for  `joystick = Joystick(0, pygame)`. If you have more t
 
 Once that is done, simply run `python ./controller.py`. You will also need to install `pygame`. `python -m pip install pygame`.
 
+# NOTES
+This this still missing support for dynamic speeds, and I haven't tested this yet. Probably breaks...
+
 
 This uses code from [VISCA-IP-Controller](https://github.com/misterhay/VISCA-IP-Controller).
