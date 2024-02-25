@@ -1,6 +1,7 @@
 import pygame
 import socket
 from time import sleep
+import faulthandler; faulthandler.enable()
 
 # PT STOP COMMAND: 81 01 06 01 01 01 03 03 FF
 # ZOOM STOP COMMAND: 81 01 04 07 00 FF
@@ -37,18 +38,18 @@ class Camera:
         self.socket.connect((ip, port))
 
     def pan_speed(self, speed):
-        scale = -0.5
+        scale = 1.5
         self._pt_command[
             Camera.PAN_SPEED
-        ] = "04"  # str(hex(round(24*(abs(speed)**((2 + scale))))))[2:].zfill(2).upper()
+        ] = str(hex(round(24*(abs(speed)**((2 + scale))))))[2:].zfill(2).upper()
         if self._pt_command[Camera.PAN_SPEED] == "00":
             self._pt_command[Camera.PAN_DIRECTION] = "03"
 
     def tilt_speed(self, speed):
-        scale = -0.5
+        scale = 1.5
         self._pt_command[
             Camera.TILT_SPEED
-        ] = "04"  # str(hex(round(20*(abs(speed)**((2 + scale))))))[2:].zfill(2).upper()
+        ] = str(hex(round(20*(abs(speed)**((2 + scale))))))[2:].zfill(2).upper()
         if self._pt_command[Camera.TILT_SPEED] == "00":
             self._pt_command[Camera.TILT_DIRECTION] = "03"
 
@@ -57,7 +58,6 @@ class Camera:
         self._z_command[1] = self._z_command[1][0] + str(speed)
         if speed == "0":
             self.zoom_in()
-
     def stop(self):
         stop = "00 0B 81 01 06 01 04 00 03 03 FF"
         self.socket.send(bytearray.fromhex(stop))
@@ -99,7 +99,7 @@ class Camera:
         pt_command.extend(self._pt_command)
         pt_command = [Camera._pt_stop] if pt_stop else pt_command
         pt_bytes = bytearray.fromhex(" ".join(pt_command))
-        if pt_bytes != self._pt_bytes_previous or True:
+        if pt_bytes != self._pt_bytes_previous:
             print(pt_bytes)
             self.socket.send(pt_bytes)
             self._pt_bytes_previous = pt_bytes
@@ -107,7 +107,7 @@ class Camera:
         zoom_command.extend(self._z_command)
         zoom_command = [Camera._zoom_stop] if zoom_stop else zoom_command
         zoom_bytes = bytearray.fromhex(" ".join(zoom_command))
-        if zoom_bytes != self._zoom_bytes_previous or True:
+        if zoom_bytes != self._zoom_bytes_previous:
             print("zoom_bytes", zoom_bytes)
             self._zoom_bytes_previous = zoom_bytes
             #  a = "00 08 81 01 04 07 37 FF"
@@ -159,7 +159,6 @@ class Joystick:
         return speed if speed > 0 else 0
 
     def pt_stop(self):
-        print(self.tilt_speed(), self.pan_speed())
         return not (self.tilt_speed() or self.pan_speed())
 
     def zoom_stop(self):
@@ -187,7 +186,7 @@ camera = Camera('192.168.250.52', 5002)
 pygame.init()
 pygame.joystick.init()
 joystick = Joystick(0, pygame)
-while not sleep(0.5):
+while not sleep(0.003):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             break
@@ -195,14 +194,17 @@ while not sleep(0.5):
         camera.left(joystick.pan_speed())
     elif joystick.right():
         camera.right(joystick.pan_speed())
+    else:
+        camera.pan_speed(0)
     if joystick.up():
         camera.up(joystick.tilt_speed())
     elif joystick.down():
         camera.down(joystick.tilt_speed())
+    else:
+        camera.tilt_speed(0)
     if joystick.zoom_in():
         camera.zoom_in(joystick.zoom_speed())
     elif joystick.zoom_out():
         camera.zoom_out(joystick.zoom_speed())
-    camera.stop()
     camera.send(joystick.pt_stop(), joystick.zoom_stop())
 pygame.quit()
