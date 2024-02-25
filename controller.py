@@ -97,20 +97,21 @@ class Camera:
         # pt_payload_length = "0B"  # str(hex(11))[2:].zfill(2)
         pt_command = ["00", "0B"]
         pt_command.extend(self._pt_command)
-        pt_command = Camera._pt_stop if pt_stop else pt_command
+        pt_command = [Camera._pt_stop] if pt_stop else pt_command
         pt_bytes = bytearray.fromhex(" ".join(pt_command))
-        if pt_bytes != self._pt_bytes_previous:
+        if pt_bytes != self._pt_bytes_previous or True:
+            print(pt_bytes)
             self.socket.send(pt_bytes)
             self._pt_bytes_previous = pt_bytes
         zoom_command = ["00", "08"]
         zoom_command.extend(self._z_command)
-        zoom_command = Camera._zoom_stop if zoom_stop else zoom_command
+        zoom_command = [Camera._zoom_stop] if zoom_stop else zoom_command
         zoom_bytes = bytearray.fromhex(" ".join(zoom_command))
-        if zoom_bytes != self._zoom_bytes_previous:
+        if zoom_bytes != self._zoom_bytes_previous or True:
             print("zoom_bytes", zoom_bytes)
             self._zoom_bytes_previous = zoom_bytes
             #  a = "00 08 81 01 04 07 37 FF"
-            self.socket.send(zoom_bytes)
+            #self.socket.send(zoom_bytes)
 
 
 class Joystick:
@@ -158,6 +159,7 @@ class Joystick:
         return speed if speed > 0 else 0
 
     def pt_stop(self):
+        print(self.tilt_speed(), self.pan_speed())
         return not (self.tilt_speed() or self.pan_speed())
 
     def zoom_stop(self):
@@ -185,21 +187,22 @@ camera = Camera('192.168.250.52', 5002)
 pygame.init()
 pygame.joystick.init()
 joystick = Joystick(0, pygame)
-while not sleep(0.3):
+while not sleep(0.5):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             break
     if joystick.left():
         camera.left(joystick.pan_speed())
-    if joystick.right():
+    elif joystick.right():
         camera.right(joystick.pan_speed())
     if joystick.up():
         camera.up(joystick.tilt_speed())
-    if joystick.down():
+    elif joystick.down():
         camera.down(joystick.tilt_speed())
     if joystick.zoom_in():
         camera.zoom_in(joystick.zoom_speed())
-    if joystick.zoom_out():
+    elif joystick.zoom_out():
         camera.zoom_out(joystick.zoom_speed())
+    camera.stop()
     camera.send(joystick.pt_stop(), joystick.zoom_stop())
 pygame.quit()
